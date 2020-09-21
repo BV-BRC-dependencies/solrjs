@@ -1,10 +1,8 @@
 var debug = require("debug")("solrjs");
 var request = require('request');
 var EventEmitter = require('events').EventEmitter;
-var util=require("util");
 var declare = require("dojo-declare/declare");
 var defer = require("promised-io/promise").defer;
-var when= require("promised-io/promise").when;
 var Readable = require('event-stream').readable;
 
 var limitre = /(&rows=)(\d*)/;

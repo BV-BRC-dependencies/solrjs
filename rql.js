@@ -1,9 +1,4 @@
 var debug = require('debug')('solrjs:rql')
-var request = require('request');
-var EventEmitter = require('events').EventEmitter;
-var util=require("util");
-var defer = require("promised-io/promise").defer;
-var when= require("promised-io/promise").when;
 var RQLQuery= require("rql/query").Query;
 var parser = require("rql/parser");
 
