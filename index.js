@@ -6,9 +6,9 @@ var defer = require("promised-io/promise").defer;
 var Readable = require('event-stream').readable;
 
 var limitre = /(&rows=)(\d*)/;
-var startre= /(&start=)(\d*)/;
+// var startre= /(&start=)(\d*)/;
 
-var client = module.exports =  declare([EventEmitter], {
+module.exports =  declare([EventEmitter], {
     constructor: function(url, options){
         debug("Instantiate SOLRjs Client at " + url);
         this.url = url;
@@ -37,7 +37,7 @@ var client = module.exports =  declare([EventEmitter], {
         var _self=this;
         var qbody = query + "&start=0&wt=json&cursorMark=" + cursorMark;
         var url = this.url+ "/select";
-          console.log("QUERY: ", qbody);
+        console.log("QUERY: ", qbody);
         request({
             url:url,
             method: "POST",
@@ -53,13 +53,13 @@ var client = module.exports =  declare([EventEmitter], {
             if (cursorMark=="*"){
                 var header = {response:{}}
                 if (data.responseHeader) {
-                        header.responseHeader = data.responseHeader;
+                    header.responseHeader = data.responseHeader;
                 }
 
                 if (data.response){
                     Object.keys(data.response).forEach(function(key){
-                            if (key=="docs") { return; }
-                            header.response[key]=data.response[key];
+                        if (key=="docs") { return; }
+                        header.response[key]=data.response[key];
                     });
 
                     stream.emit("data",header);
@@ -67,7 +67,7 @@ var client = module.exports =  declare([EventEmitter], {
                     console.log("No Response Body");
                     stream.emit("end");
                     callback()
-
+                    return
                 }
                 // console.log("PUSH INTO STREAM: ", header);
             }
@@ -127,8 +127,8 @@ var client = module.exports =  declare([EventEmitter], {
         var totalReqLimit=this.maxStreamSize;
 
         if (limitMatch){
-               // console.log("limitMatch: ", limitMatch);
-                var totalReqLimit=limitMatch[2];
+            // console.log("limitMatch: ", limitMatch);
+            totalReqLimit=limitMatch[2];
         }
 
         //console.log("TOTAL REQUEST LIMIT: ", totalReqLimit)
@@ -146,10 +146,10 @@ var client = module.exports =  declare([EventEmitter], {
         var def = new defer();
 
 //        var qbody = encodeURIComponent(query + "&wt=json");
-        qbody = query += "&wt=json";
+        var qbody = query += "&wt=json";
         debug("Query Body: ", qbody);
 
-        var req = request({
+        request({
             url: this.url + "/select",
             method: "POST",
             headers: {
@@ -185,7 +185,7 @@ var client = module.exports =  declare([EventEmitter], {
             id = encodeURIComponent(id);
         }
         debug(this.url + "/get?"+prop+"=" + id);
-        var req = request({
+        request({
             url: this.url + "/get?"+prop+"=" + id,
             method: "GET",
             headers: {
@@ -206,7 +206,7 @@ var client = module.exports =  declare([EventEmitter], {
     getSchema: function(){
         var def = new defer();
         // debug("getSchema()", this.url + "/schema?wt=json");
-        var req = request({
+        request({
             url: this.url + "/schema",
             method: "GET",
             headers: {

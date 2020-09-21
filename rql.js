@@ -14,8 +14,6 @@ RQLQuery.prototype.toSolr = function(opts){
             known: ['lt','lte','gt','gte','ne','in','nin','not','mod','all','size','exists','type','elemMatch'],
     });
     debug("normalized: ", normalized);
-
-    var sq;
     debug("this.name: ", this.name);
     debug("this.args: ", this.args);
     var sq=(this.name === "and" ?
@@ -40,7 +38,7 @@ RQLQuery.prototype.toSolr = function(opts){
 
         if (normalized.sortObj){
                 var so = {}
-                for (prop in normalized.sortObj){
+                for (var prop in normalized.sortObj){
                         so[prop] = (normalized.sortObj[prop]>0)?"asc":"desc";
                 }
         sq += "&sort=" + Object.keys(so).map(function(prop){
@@ -87,7 +85,7 @@ RQLQuery.prototype.normalize = function(options){
         var result = {
             original: this,
             sort: [],
-            limit: [Infinity, 0, Infinity],
+            // limit: [Infinity, 0, Infinity],
             skip: 0,
             limit: Infinity,
             select: [],
@@ -169,7 +167,7 @@ function encodeString(s) {
 
         if (s.match(/[\(\)]/)) {
             s = s.replace("(","%28").replace(")","%29");
-        };
+        }
 
         s = s.replace(/\%3A/g,":");
 
@@ -189,7 +187,7 @@ function encodeString(s) {
     return s;
 }
 
-var encodeValue = exports.encodeValue = function(val) {
+exports.encodeValue = function(val) {
     //console.log("ENOCDE VALUE: ", val);
     var encoded;
     if (val === null) val = 'null';
@@ -255,7 +253,7 @@ function queryToSolr(part,options) {
     }
 
     return exports.encodeValue(part);
-};
+}
 
 module.exports =  RQLQuery;
 
@@ -408,7 +406,7 @@ var handlers = [
         }
 
         function existingFacetProps(tprop){
-            for (i=0; i < options.facets.length; ++i){
+            for (var i=0; i < options.facets.length; ++i){
                 if (options.facets[i]['field'] == tprop){
                     return true;
                 }
@@ -448,7 +446,7 @@ var handlers = [
         }
 
         function existingGroupingsProps(tprop){
-            for (i=0; i < options.groupings.length; ++i){
+            for (var i=0; i < options.groupings.length; ++i){
                 if (options.groupings[i]['field'] == tprop){
                     return true;
                 }
