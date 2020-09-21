@@ -1,228 +1,266 @@
-var debug = require("debug")("solrjs");
-var request = require('request');
-var EventEmitter = require('events').EventEmitter;
-var declare = require("dojo-declare/declare");
-var defer = require("promised-io/promise").defer;
-var Readable = require('event-stream').readable;
+const debug = require('debug')('solrjs')
+const EventEmitter = require('events').EventEmitter
+const declare = require('dojo-declare/declare')
+const Readable = require('event-stream').readable
+const Http = require('http')
+const URL = require('url').URL
+const limitRe = /(&rows=)(\d*)/
 
-var limitre = /(&rows=)(\d*)/;
-// var startre= /(&start=)(\d*)/;
-
-module.exports =  declare([EventEmitter], {
-    constructor: function(url, options){
-        debug("Instantiate SOLRjs Client at " + url);
-        this.url = url;
-        this.options = options;
-        this.agent = undefined;
-    },
-
-    setAgent: function(agent) {
-        this.agent = agent;
-    },
-    streamChunkSize: 200,
-    maxStreamSize:250000,
-    _streamQuery: function(query,stream,callback,currentCount,totalReqLimit,cursorMark){
-
-        console.log("_streamQuery currentCount: ", currentCount, "total: ", totalReqLimit);
-        if (!cursorMark){
-            cursorMark="*";
+function subQuery (options, body) {
+  return new Promise((resolve, reject) => {
+    const req = Http.request(options, (res) => {
+      let rawData = ''
+      res.on('data', (chunk) => {
+        rawData += chunk.toString()
+      })
+      res.on('end', () => {
+        try {
+          resolve(JSON.parse(rawData))
+        } catch {
+          reject(new Error(`Unable to parse sub stream query response`))
         }
+      })
+      res.on('error', (err) => {
+        reject(err)
+      })
+    })
+    req.write(body)
+    req.end()
+  })
+}
 
-        var rowsmatch = query.match(limitre);
+module.exports = declare([EventEmitter], {
+  constructor: function (url, options) {
+    debug('Instantiate SOLRjs Client at ' + url)
+    this.url = url
+    this.options = options
+    this.agent = undefined
+  },
 
-        if (totalReqLimit>rowsmatch){
-            query = query.replace(limitre,"&rows=" + this.streamChunkSize);
-        }
-
-        var _self=this;
-        var qbody = query + "&start=0&wt=json&cursorMark=" + cursorMark;
-        var url = this.url+ "/select";
-        console.log("QUERY: ", qbody);
-        request({
-            url:url,
-            method: "POST",
-            headers: {
-                accept: "application/json",
-                'content-type':"application/x-www-form-urlencoded"
-            },
-            agent: this.agent,
-            body: qbody,
-            json: true
-        }, function(err,res,data){
-            // console.log("Data: ", data)
-            if (cursorMark=="*"){
-                var header = {response:{}}
-                if (data.responseHeader) {
-                    header.responseHeader = data.responseHeader;
-                }
-
-                if (data.response){
-                    Object.keys(data.response).forEach(function(key){
-                        if (key=="docs") { return; }
-                        header.response[key]=data.response[key];
-                    });
-
-                    stream.emit("data",header);
-                }else{
-                    console.log("No Response Body");
-                    stream.emit("end");
-                    callback()
-                    return
-                }
-                // console.log("PUSH INTO STREAM: ", header);
-            }
-
-            if (data.response && (data.response.numFound < totalReqLimit)){
-                totalReqLimit = data.response.numFound;
-            }
-
-            if (data.nextCursorMark){
-                //  console.log("Got Next CursorMark: ", data.nextCursorMark);
-                if (data.response.docs){
-                    data.response.docs.forEach(function(doc){
-                    //      console.log("PUSH DATA INTO STREAM: ", doc);
-                    if (currentCount++ < totalReqLimit) {
-                        stream.emit("data",doc);
-                    }
-
-                    });
-                    //  console.log("More than total?", currentCount<totalReqLimit);
-                    if (currentCount < totalReqLimit) {
-                        _self._streamQuery(query,stream,callback,currentCount,totalReqLimit,data.nextCursorMark);
-                    }else{
-                        //         console.log("END STREAM")
-                        stream.emit("end");
-                        callback();
-                    }
-                }else{
-                    //      console.log("NO DOCS: ",data);
-                    stream.emit('end');
-                    callback();
-                }
-            }else{
-                //   console.log("No Next CursorMark");
-                if (data.response.docs){
-                    data.response.docs.forEach(function(doc){
-                        //  console.log("PUSH DATA INTO STREAM: ", doc);
-                        stream.emit("data",doc);
-                    });
-                    stream.emit('end');
-                    callback();
-                }else{
-                    console.log("NO DOCS: ",data);
-                    stream.emit('end');
-                    callback();
-                }
-            }
-        });
-    },
-
-
-    stream: function(query,options){
-        var def = new defer();
-        var _self=this;
-
-
-        var limitMatch = query.match(limitre);
-        var totalReqLimit=this.maxStreamSize;
-
-        if (limitMatch){
-            // console.log("limitMatch: ", limitMatch);
-            totalReqLimit=limitMatch[2];
-        }
-
-        //console.log("TOTAL REQUEST LIMIT: ", totalReqLimit)
-
-        var es = new Readable(function(count,callback){
-            _self._streamQuery(query,this,callback,0,totalReqLimit);
-        });
-
-        def.resolve({stream: es});
-
-        return def.promise;
-    },
-
-    query: function(query,options) {
-        var def = new defer();
-
-//        var qbody = encodeURIComponent(query + "&wt=json");
-        var qbody = query += "&wt=json";
-        debug("Query Body: ", qbody);
-
-        request({
-            url: this.url + "/select",
-            method: "POST",
-            headers: {
-                accept: "application/json",
-                'content-type':"application/x-www-form-urlencoded"
-            },
-            agent: this.agent,
-            body: qbody,
-            json: true
-        }, function(error, response, body){
-            if (error) {
-                return def.reject(error);
-            }
-            def.resolve(body);
-        });
-
-        return def.promise;
-    },
-
-    get: function(id){
-        var def = new defer();
-        var prop = "id";
-        if ((id instanceof Array) && (id.length>0)){
-            if (id.length==1){
-                id = encodeURIComponent(id[0]);
-            }else{
-                prop = "ids";
-                id = id.map(function(i){
-                    return encodeURIComponent(i);
-                }).join(",");
-            }
-        }else{
-            id = encodeURIComponent(id);
-        }
-        debug(this.url + "/get?"+prop+"=" + id);
-        request({
-            url: this.url + "/get?"+prop+"=" + id,
-            method: "GET",
-            headers: {
-                accept: "application/json",
-            },
-            agent: this.agent,
-            json: true
-        }, function(error, response, body){
-            if (error) {
-                return def.reject(error);
-            }
-            def.resolve(body);
-        });
-
-        return def.promise;
-    },
-
-    getSchema: function(){
-        var def = new defer();
-        // debug("getSchema()", this.url + "/schema?wt=json");
-        request({
-            url: this.url + "/schema",
-            method: "GET",
-            headers: {
-                accept: "application/json",
-            },
-            agent: this.agent,
-            json: true
-        }, function(error, response, body){
-            if (error) {
-                console.error("Error Retreiving Schema: ", error);
-                return def.reject(error);
-            }
-            // debug("Schema Body: ", body);
-            def.resolve(body);
-        });
-
-        return def.promise;
+  setAgent: function (agent) {
+    this.agent = agent
+  },
+  streamChunkSize: 200,
+  maxStreamSize: 250000,
+  _streamQuery: function (query, stream, callback, currentCount, totalReqLimit, cursorMark) {
+    debug(`_streamQuery currentCount: ${currentCount} total: ${totalReqLimit}`)
+    if (!cursorMark) {
+      cursorMark = '*'
     }
-});
+
+    const rowsMatch = query.match(limitRe)
+
+    if (totalReqLimit > rowsMatch) {
+      query = query.replace(limitRe, `&rows=${this.streamChunkSize}`)
+    }
+
+    const _self = this
+    const qbody = `${query}&start=0&wt=json&cursorMark=${cursorMark}`
+
+    debug(`Stream call: ${qbody}`)
+
+    const parsedUrl = new URL(this.url)
+    subQuery({
+      method: 'POST',
+      agent: this.agent,
+      headers: {
+        accept: 'application/json',
+        'Content-Type': 'application/x-www-form-urlencoded'
+      },
+      hostname: parsedUrl.hostname,
+      port: parsedUrl.port,
+      path: `${parsedUrl.pathname}/select`
+    }, qbody).then((data) => {
+      if (cursorMark === '*') {
+        const header = { response: {} }
+        if (data.responseHeader) {
+          header.responseHeader = data.responseHeader
+        }
+
+        if (data.response) {
+          Object.keys(data.response).forEach((key) => {
+            if (key === 'docs') {
+              return
+            }
+            header.response[key] = data.response[key]
+          })
+
+          stream.emit('data', header)
+        } else {
+          debug('No Response Body')
+          stream.emit('end')
+          callback()
+          return
+        }
+      }
+
+      if (data.response && (data.response.numFound < totalReqLimit)) {
+        totalReqLimit = data.response.numFound
+      }
+
+      if (data.nextCursorMark) {
+        debug('Got Next CursorMark: ', data.nextCursorMark)
+        if (data.response.docs) {
+          data.response.docs.forEach((doc) => {
+            // debug('PUSH DATA INTO STREAM: ', doc)
+            if (currentCount++ < totalReqLimit) {
+              stream.emit('data', doc)
+            }
+          })
+          debug('More than total?', currentCount < totalReqLimit)
+          if (currentCount < totalReqLimit) {
+            _self._streamQuery(query, stream, callback, currentCount, totalReqLimit, data.nextCursorMark)
+          } else {
+            debug('END STREAM')
+            stream.emit('end')
+            callback()
+          }
+        } else {
+          debug('NO DOCS: ', data)
+          stream.emit('end')
+          callback()
+        }
+      } else {
+        debug('No Next CursorMark')
+        if (data.response.docs) {
+          data.response.docs.forEach((doc) => {
+            // debug('PUSH DATA INTO STREAM: ', doc)
+            stream.emit('data', doc)
+          })
+          stream.emit('end')
+          callback()
+        } else {
+          debug('NO DOCS: ', data)
+          stream.emit('end')
+          callback()
+        }
+      }
+    })
+  },
+
+  stream: function (query, options) {
+    return new Promise((resolve, reject) => {
+      var _self = this
+      var limitMatch = query.match(limitRe)
+      var totalReqLimit = this.maxStreamSize
+
+      if (limitMatch) {
+        totalReqLimit = limitMatch[2]
+      }
+
+      const es = new Readable(function (count, callback) {
+        _self._streamQuery(query, this, callback, 0, totalReqLimit)
+      })
+
+      resolve({ stream: es })
+    })
+  },
+
+  query: function (query, options) {
+    return new Promise((resolve, reject) => {
+      const parsedUrl = new URL(this.url)
+      const qbody = `${query}&wt=json`
+      debug(`Query call: ${qbody}`)
+      // debug(`${parsedUrl.host}/${parsedUrl.path}/select?${qbody}`)
+
+      const req = Http.request({
+        method: 'POST',
+        agent: this.agent,
+        headers: {
+          accept: 'application/json',
+          'Content-Type': 'application/x-www-form-urlencoded'
+        },
+        hostname: parsedUrl.hostname,
+        port: parsedUrl.port,
+        path: `${parsedUrl.pathname}/select`
+      }, (res) => {
+        let rawResponseData = ''
+        res.on('data', (chunk) => {
+          rawResponseData += chunk.toString()
+        })
+        res.on('end', () => {
+          try {
+            const parsed = JSON.parse(rawResponseData)
+            resolve(parsed)
+          } catch {
+            reject(new Error(`Unable to parse response. ${rawResponseData}`))
+          }
+        })
+        res.on('error', (err) => {
+          reject(err)
+        })
+      })
+      req.write(qbody)
+      req.end()
+    })
+  },
+
+  get: function (id) {
+    return new Promise((resolve, reject) => {
+      let prop = 'id'
+      if ((id instanceof Array) && (id.length > 0)) {
+        if (id.length === 1) {
+          id = encodeURIComponent(id[0])
+        } else {
+          prop = 'ids'
+          id = id.map((i) => {
+            return encodeURIComponent(i)
+          }).join(',')
+        }
+      } else {
+        id = encodeURIComponent(id)
+      }
+      debug(`GET call: ${this.url}/get?${prop}=${id}`)
+      Http.get(`${this.url}/get?${prop}=${id}`, {
+        headers: {
+          accept: 'application/json'
+        },
+        agent: this.agent
+      }, (res) => {
+        let rawResponseData = ''
+        res.on('data', (chunk) => {
+          rawResponseData += chunk.toString()
+        })
+        res.on('end', () => {
+          try {
+            const parsed = JSON.parse(rawResponseData)
+            resolve(parsed)
+          } catch {
+            reject(new Error(`Unable to parse get query response. ${rawResponseData}`))
+          }
+        })
+        res.on('error', (err) => {
+          reject(err)
+        })
+      })
+    })
+  },
+
+  getSchema: function () {
+    return new Promise((resolve, reject) => {
+      debug(`Schema call: ${this.url}/schema`)
+      Http.get(`${this.url}/schema`, {
+        headers: {
+          accept: 'application/json'
+        },
+        agent: this.agent
+      }, (res) => {
+        let rawResponseData = ''
+        res.on('data', (chunk) => {
+          rawResponseData += chunk.toString()
+        })
+        res.on('end', () => {
+          try {
+            const parsed = JSON.parse(rawResponseData)
+            resolve(parsed)
+          } catch {
+            reject(new Error(`Unable to parse schema response. ${rawResponseData}`))
+          }
+        })
+        res.on('error', (err) => {
+          reject(err)
+        })
+      })
+    })
+  }
+})
