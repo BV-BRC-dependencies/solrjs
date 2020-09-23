@@ -17,15 +17,15 @@ function subQuery (options, body) {
         try {
           resolve(JSON.parse(rawData))
         } catch {
-          reject(new Error(`Unable to parse sub stream query response`))
+          reject(new Error(`Unable to parse the stream response.`))
         }
       })
       res.on('error', (err) => {
-        reject(new Error(`Unable to receive response. ${err}`))
+        reject(new Error(`Unable to receive a response. ${err}`))
       })
     })
     req.on('error', (err) => {
-      reject(new Error(`Unable to make request to database. ${err.code}`))
+      reject(new Error(`Unable to request the database. ${err.code}`))
     })
     req.write(body)
     req.end()
@@ -190,15 +190,15 @@ module.exports = declare([EventEmitter], {
             const parsed = JSON.parse(rawResponseData)
             resolve(parsed)
           } catch {
-            reject(new Error(`Unable to parse response. ${rawResponseData}`))
+            reject(new Error(`Unable to parse the query response. ${rawResponseData}`))
           }
         })
         res.on('error', (err) => {
-          reject(new Error(`Unable to receive response. ${err}`))
+          reject(new Error(`Unable to receive a response. ${err}`))
         })
       })
       req.on('error', (err) => {
-        reject(new Error(`Unable to make request to database. ${err.code}`))
+        reject(new Error(`Unable to request the database. ${err.code}`))
       })
       req.write(qbody)
       req.end()
@@ -236,15 +236,15 @@ module.exports = declare([EventEmitter], {
             const parsed = JSON.parse(rawResponseData)
             resolve(parsed)
           } catch {
-            reject(new Error(`Unable to parse get query response. ${rawResponseData}`))
+            reject(new Error(`Unable to parse the get response. ${rawResponseData}`))
           }
         })
         res.on('error', (err) => {
-          reject(new Error(`Unable to receive response. ${err}`))
+          reject(new Error(`Unable to receive a response. ${err}`))
         })
       })
       req.on('error', (err) => {
-        reject(new Error(`Unable to make request to database. ${err.code}`))
+        reject(new Error(`Unable to request the database. ${err.code}`))
       })
     })
   },
@@ -267,15 +267,15 @@ module.exports = declare([EventEmitter], {
             const parsed = JSON.parse(rawResponseData)
             resolve(parsed)
           } catch {
-            reject(new Error(`Unable to parse schema response. ${rawResponseData}`))
+            reject(new Error(`Unable to parse the schema response. ${rawResponseData}`))
           }
         })
         res.on('error', (err) => {
-          reject(new Error(`Unable to receive response. ${err}`))
+          reject(new Error(`Unable to receive a response. ${err}`))
         })
       })
       req.on('error', (err) => {
-        reject(new Error(`Unable to make request to database. ${err.code}`))
+        reject(new Error(`Unable to request the database. ${err.code}`))
       })
     })
   }
