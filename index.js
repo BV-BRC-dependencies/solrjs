@@ -21,11 +21,11 @@ function subQuery (options, body) {
         }
       })
       res.on('error', (err) => {
-        reject(err)
+        reject(new Error(`Unable to receive response. ${err}`))
       })
     })
     req.on('error', (err) => {
-      reject(err.code || err)
+      reject(new Error(`Unable to make request to database. ${err.code}`))
     })
     req.write(body)
     req.end()
@@ -194,11 +194,11 @@ module.exports = declare([EventEmitter], {
           }
         })
         res.on('error', (err) => {
-          reject(err)
+          reject(new Error(`Unable to receive response. ${err}`))
         })
       })
       req.on('error', (err) => {
-        reject(err.code || err)
+        reject(new Error(`Unable to make request to database. ${err.code}`))
       })
       req.write(qbody)
       req.end()
@@ -240,11 +240,11 @@ module.exports = declare([EventEmitter], {
           }
         })
         res.on('error', (err) => {
-          reject(err)
+          reject(new Error(`Unable to receive response. ${err}`))
         })
       })
       req.on('error', (err) => {
-        reject(err.code || err)
+        reject(new Error(`Unable to make request to database. ${err.code}`))
       })
     })
   },
@@ -271,11 +271,11 @@ module.exports = declare([EventEmitter], {
           }
         })
         res.on('error', (err) => {
-          reject(err)
+          reject(new Error(`Unable to receive response. ${err}`))
         })
       })
       req.on('error', (err) => {
-        reject(err.code || err)
+        reject(new Error(`Unable to make request to database. ${err.code}`))
       })
     })
   }
