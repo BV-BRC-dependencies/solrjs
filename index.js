@@ -24,6 +24,9 @@ function subQuery (options, body) {
         reject(err)
       })
     })
+    req.on('error', (err) => {
+      reject(err.code || err)
+    })
     req.write(body)
     req.end()
   })
@@ -135,6 +138,10 @@ module.exports = declare([EventEmitter], {
           callback()
         }
       }
+    }, (err) => {
+      console.error(`Unable to complete stream query: ${err}`)
+      stream.emit('end')
+      callback()
     })
   },
 
@@ -190,6 +197,9 @@ module.exports = declare([EventEmitter], {
           reject(err)
         })
       })
+      req.on('error', (err) => {
+        reject(err.code || err)
+      })
       req.write(qbody)
       req.end()
     })
@@ -211,7 +221,7 @@ module.exports = declare([EventEmitter], {
         id = encodeURIComponent(id)
       }
       debug(`GET call: ${this.url}/get?${prop}=${id}`)
-      Http.get(`${this.url}/get?${prop}=${id}`, {
+      const req = Http.get(`${this.url}/get?${prop}=${id}`, {
         headers: {
           accept: 'application/json'
         },
@@ -233,13 +243,16 @@ module.exports = declare([EventEmitter], {
           reject(err)
         })
       })
+      req.on('error', (err) => {
+        reject(err.code || err)
+      })
     })
   },
 
   getSchema: function () {
     return new Promise((resolve, reject) => {
       debug(`Schema call: ${this.url}/schema`)
-      Http.get(`${this.url}/schema`, {
+      const req = Http.get(`${this.url}/schema`, {
         headers: {
           accept: 'application/json'
         },
@@ -260,6 +273,9 @@ module.exports = declare([EventEmitter], {
         res.on('error', (err) => {
           reject(err)
         })
+      })
+      req.on('error', (err) => {
+        reject(err.code || err)
       })
     })
   }
