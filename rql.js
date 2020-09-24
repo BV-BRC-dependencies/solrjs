@@ -235,7 +235,7 @@ function serializeArgs(array, delimiter){
         if (array[i]) {
             var x = queryToSolr(array[i]);
             if (x) {
-                results.push(queryToSolr(array[i]));
+                results.push(x);// queryToSolr(array[i]));
             }
         }
     }
@@ -246,6 +246,9 @@ function queryToSolr(part,options) {
     options = options || {}
     if (part instanceof Array) {
         return '(' + serializeArgs(part, ",")+')';
+    }
+    else if (part instanceof Date) {
+        return part.toISOString()
     }
 
     if (part && part.name && part.args && _handlerMap[part.name]) {
@@ -334,20 +337,20 @@ var handlers = [
         return query.args.join(":/")+"/";
     }],
     ["ge", function(query, options){
-        return query.args[0] + ":{" + query.args[1] + " TO *}";
+        return query.args[0] + ":{" + queryToSolr(query.args[1]) + " TO *}";
     }],
     ["gt", function(query, options){
-        return query.args[0] + ":[" + query.args[1] + " TO *]";
+        return query.args[0] + ":[" + queryToSolr(query.args[1]) + " TO *]"
     }],
     ["le", function(query, options){
-        return query.args[0] + ":{* TO " + query.args[1] + "}";
+        return query.args[0] + ":{* TO " + queryToSolr(query.args[1]) + "}";
     }],
     ["lt", function(query, options){
-        return query.args[0] + ":[* TO " + query.args[1] + "]";
+        return query.args[0] + ":[* TO " + queryToSolr(query.args[1]) + "]";
     }],
 
     ["between", function(query, options){
-        return query.args[0] + ":[" + query.args[1] + " TO " + query.args[2] + "]";
+        return query.args[0] + ":[" + queryToSolr(query.args[1]) + " TO " + queryToSolr(query.args[2]) + "]";
     }],
 
     ["field", function(query, options){

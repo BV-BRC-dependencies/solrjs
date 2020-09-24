@@ -20,6 +20,24 @@ describe('Test RqlParser', () => {
       done()
     }
   })
+  it('Parse Date', (done) => {
+    const rqlQueryGt = Rql('gt(field,date:2020-01-01T12:34:56Z)').toSolr({ defaultLimit: 25})
+    assert.equal(rqlQueryGt, '&q=field:[2020-01-01T12:34:56.000Z TO *]&rows=25')
+
+    const rqlQueryGe = Rql('ge(field,date:2020-01-01T12:34:56Z)').toSolr({ defaultLimit: 25})
+    assert.equal(rqlQueryGe, '&q=field:{2020-01-01T12:34:56.000Z TO *}&rows=25')
+
+    const rqlQueryLt = Rql('lt(field,date:2020-01-01T12:34:56Z)').toSolr({ defaultLimit: 25})
+    assert.equal(rqlQueryLt, '&q=field:[* TO 2020-01-01T12:34:56.000Z]&rows=25')
+
+    const rqlQueryLe = Rql('le(field,date:2020-01-01T12:34:56Z)').toSolr({ defaultLimit: 25})
+    assert.equal(rqlQueryLe, '&q=field:{* TO 2020-01-01T12:34:56.000Z}&rows=25')
+
+    const rqlQueryBetween = Rql('between(field,date:2020-01-01T12:34:56Z,date:2020-12-31T23:59:59Z)').toSolr({ defaultLimit: 25})
+    assert.equal(rqlQueryBetween, '&q=field:[2020-01-01T12:34:56.000Z TO 2020-12-31T23:59:59.000Z]&rows=25')
+
+    done()
+  })
 })
 
 describe('Test Solr Translation', () => {
