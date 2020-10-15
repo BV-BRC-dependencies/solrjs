@@ -358,6 +358,9 @@ var handlers = [
   }],
 
   ['in', function (query, options) {
+    if (query.args[1] == undefined || query.args[1].length === 0) {
+      throw Error(`Query Syntax Error: ${query}`)
+    }
     return '(' + query.args[0] + ':(' + query.args[1].join(' OR ') + '))'
   }],
 
