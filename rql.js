@@ -301,18 +301,18 @@ var handlers = [
     var field = parts[0]
 
     if (val.charAt(0) === '"') {
-      return '-' + parts.join(':')
+      return '!' + parts.join(':')
     } else {
       var vals = val.split(/\s+/)
 
       return vals.map(function (v) {
-        return '-' + field + ':' + encodeURIComponent(v)
+        return '!' + field + ':' + encodeURIComponent(v)
       }).join(' AND ')
     }
   }],
 
   ['exists', function (query, options) {
-    return '-' + query.args[0] + ':[* TO *]'
+    return query.args[0] + ':*'
   }],
 
   // ['match', function (query, options) {

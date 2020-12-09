@@ -58,12 +58,12 @@ describe('Test Solr Translation', () => {
   })
   it('Convert ne operator', (done) => {
     const parsed = Rql('ne(fieldName,fieldValue)').toSolr({ defaultLimit: 25 })
-    assert.equal(parsed, '&q=-fieldName:fieldValue&rows=25')
+    assert.equal(parsed, '&q=!fieldName:fieldValue&rows=25')
     done()
   })
   it('Convert exists operator', (done) => {
     const parsed = Rql('exists(fieldName)').toSolr({ defaultLimit: 25 })
-    assert.equal(parsed, '&q=-fieldName:[* TO *]&rows=25')
+    assert.equal(parsed, '&q=fieldName:*&rows=25')
     done()
   })
   // match() skip
