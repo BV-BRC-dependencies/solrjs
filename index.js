@@ -182,8 +182,14 @@ module.exports = declare([EventEmitter], {
         path: `${parsedUrl.pathname}/select`
       }, (res) => {
         let rawResponseData = ''
-        res.on('data', (chunk) => {
-          rawResponseData += chunk.toString()
+        // res.on('data', (chunk) => {
+        //   rawResponseData += chunk.toString()
+        // })
+        res.on('readable', () => {
+          let chunk
+          while ((chunk = res.read()) !== null) {
+            rawResponseData += chunk
+          }
         })
         res.on('end', () => {
           try {
