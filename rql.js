@@ -74,6 +74,14 @@ RQLQuery.prototype.toSolr = function (opts) {
     })
   }
 
+  if (normalized.genome && (normalized.genome.length > 0)) {
+    const fqConditions = []
+    normalized.genome.forEach((cond) => {
+      fqConditions.push(`${cond[0]}:${cond[1]}`)
+    })
+    sq += `&fq={!join fromIndex=genome from=genome_id to=genome_id}(${fqConditions.join(' AND ')})`
+  }
+
   return '&q=' + sq
 }
 
@@ -91,6 +99,7 @@ RQLQuery.prototype.normalize = function (options) {
     facets: [],
     groupings: [],
     json: {},
+    genome: [],
     fq: []
   }
   var plusMinus = {
@@ -143,6 +152,8 @@ RQLQuery.prototype.normalize = function (options) {
       for (var i = 1; i < args.length; i++) {
         result.json[args[0]] = result.json[args[0]] + args[i]
       }
+    } else if (func === 'genome') {
+      result.genome = result.genome.concat(args)
     }
 
     // cache search conditions
@@ -358,7 +369,7 @@ var handlers = [
   }],
 
   ['in', function (query, options) {
-    if (query.args[1] == undefined || query.args[1].length === 0) {
+    if (query.args[1] === undefined || query.args[1].length === 0) {
       throw Error(`Query Syntax Error: ${query}`)
     }
     return '(' + query.args[0] + ':(' + query.args[1].join(' OR ') + '))'
@@ -455,6 +466,15 @@ var handlers = [
     if (!existingGroupingsProps('limit')) {
       options.groupings.push({ field: 'limit', value: 500 })
     }
+  }],
+
+  // genome((taxon_lineage_ids,1234),(genome_status,Complete))
+  //   => fq={!join fromIndex=genomes from=genome_id to=genome_id}(taxon_lineage_ids:1234 AND genome_status:Complete)
+  ['genome', function (query, options) {
+    if (!options.genome) { options.genome = [] }
+    query.args.forEach((cond) => {
+      options.genome.push({ field: cond[0], value: cond[1] })
+    })
   }],
 
   // ['cursor', function (query, options) {

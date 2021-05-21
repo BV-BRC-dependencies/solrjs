@@ -126,6 +126,16 @@ describe('Test Solr Translation', () => {
     assert.equal(parsed, '&q=a:b&rows=25&group=true&group.field=fieldName&group.format=simple&group.ngroups=true&group.limit=1&group.facet=true')
     done()
   })
+  it('Convert genome operator', (done) => {
+    const parsed = Rql('genome((taxon_lineage_ids,1234))').toSolr({ defaultLimit: 25 })
+    assert.equal(parsed, '&q=*:*&rows=25&fq={!join fromIndex=genome from=genome_id to=genome_id}(taxon_lineage_ids:1234)')
+    done()
+  })
+  it('Convert genome operator', (done) => {
+    const parsed = Rql('genome((taxon_lineage_ids,1234),(genome_status,Complete))').toSolr({ defaultLimit: 25 })
+    assert.equal(parsed, '&q=*:*&rows=25&fq={!join fromIndex=genome from=genome_id to=genome_id}(taxon_lineage_ids:1234 AND genome_status:Complete)')
+    done()
+  })
   // cursor() skip
   // values() skip
   it('Convert select operator', (done) => {
