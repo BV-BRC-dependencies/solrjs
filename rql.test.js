@@ -131,9 +131,29 @@ describe('Test Solr Translation', () => {
     assert.equal(parsed, '&q=*:*&rows=25&fq={!join fromIndex=genome from=genome_id to=genome_id}(taxon_lineage_ids:1234)')
     done()
   })
-  it('Convert genome operator', (done) => {
-    const parsed = Rql('genome((taxon_lineage_ids,1234),(genome_status,Complete))').toSolr({ defaultLimit: 25 })
+  it('Convert genome operator eq', (done) => {
+    const parsed = Rql('genome((eq,taxon_lineage_ids,1234))').toSolr({ defaultLimit: 25 })
+    assert.equal(parsed, '&q=*:*&rows=25&fq={!join fromIndex=genome from=genome_id to=genome_id}(taxon_lineage_ids:1234)')
+    done()
+  })
+  it('Convert genome operator multiple eq', (done) => {
+    const parsed = Rql('genome((eq,taxon_lineage_ids,1234),(eq,genome_status,Complete))').toSolr({ defaultLimit: 25 })
     assert.equal(parsed, '&q=*:*&rows=25&fq={!join fromIndex=genome from=genome_id to=genome_id}(taxon_lineage_ids:1234 AND genome_status:Complete)')
+    done()
+  })
+  it('Convert genome operator lt gt', (done) => {
+    const parsed = Rql('genome((gt,collection_year,2000),(lt,collection_year,2020))').toSolr({ defaultLimit: 25 })
+    assert.equal(parsed, '&q=*:*&rows=25&fq={!join fromIndex=genome from=genome_id to=genome_id}(collection_year:[2000 TO *] AND collection_year:[* TO 2020])')
+    done()
+  })
+  it('Convert genome operator between', (done) => {
+    const parsed = Rql('genome((between,collection_year,2000,2020))').toSolr({ defaultLimit: 25 })
+    assert.equal(parsed, '&q=*:*&rows=25&fq={!join fromIndex=genome from=genome_id to=genome_id}(collection_year:[2000 TO 2020])')
+    done()
+  })
+  it('Convert genome operator to', (done) => {
+    const parsed = Rql('genome((to,genome_ids),(eq,taxon_lineage_ids,1234))').toSolr({ defaultLimit: 25 })
+    assert.equal(parsed, '&q=*:*&rows=25&fq={!join fromIndex=genome from=genome_id to=genome_ids}(taxon_lineage_ids:1234)')
     done()
   })
   // cursor() skip
