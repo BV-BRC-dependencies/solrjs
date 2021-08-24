@@ -1,10 +1,11 @@
 {
   "name": "solrjs",
-  "version": "0.7.8",
+  "version": "0.7.9",
   "description": "SOLR Client for Node",
   "main": "index.js",
   "scripts": {
-    "test": "mocha rql.test.js"
+    "test": "mocha rql.test*.js",
+    "lint": "eslint ."
   },
   "author": "Dustin Machi <dmachi@dojotoolkit.org>",
   "license": "BSD-2-Clause",

@@ -72,39 +72,6 @@ RQLQuery.prototype.toSolr = function (opts) {
     })
   }
 
-  if (normalized.genome && (normalized.genome.length > 0)) {
-    const fqConditions = []
-    let joinToColumnName = 'genome_id'
-
-    normalized.genome.forEach((cond) => {
-      let solrQ
-      switch (cond[0]) {
-        case 'to':
-          joinToColumnName = cond[1]
-          break
-        case 'gt':
-          solrQ = `${cond[1]}:[${cond[2]} TO *]`
-          break
-        case 'lt':
-          solrQ = `${cond[1]}:[* TO ${cond[2]}]`
-          break
-        case 'between':
-          solrQ = `${cond[1]}:[${cond[2]} TO ${cond[3]}]`
-          break
-        case 'eq':
-          solrQ = `${cond[1]}:${cond[2]}`
-          break
-        default:
-          solrQ = `${cond[0]}:${cond[1]}`
-          break
-      }
-      if (solrQ) {
-        fqConditions.push(solrQ)
-      }
-    })
-    sq += `&fq={!join fromIndex=genome from=genome_id to=${joinToColumnName}}(${fqConditions.join(' AND ')})`
-  }
-
   return '&q=' + sq
 }
 
@@ -491,10 +458,24 @@ var handlers = [
     }
   }],
 
-  // genome((taxon_lineage_ids,1234),(genome_status,Complete))
+  // genome(and(eq(taxon_lineage_ids,1234),eq(genome_status,Complete)))
   //   => fq={!join fromIndex=genomes from=genome_id to=genome_id}(taxon_lineage_ids:1234 AND genome_status:Complete)
   ['genome', function (query, options) {
     if (!options.genome) { options.genome = [] }
+    var joinToColumnName = 'genome_id'
+    var parts = []
+    query.args.forEach((a) => {
+      switch (a.name) {
+        // process special ops
+        case 'to':
+          joinToColumnName = a.args[0]
+          break
+        default:
+          parts.push(queryToSolr(a, options))
+          break
+      }
+    })
+    return `&fq={!join fromIndex=genome from=genome_id to=${joinToColumnName}}` + (parts.length === 1 ? parts[0] : `(${parts.join(' AND ')})`)
   }],
 
   // ['cursor', function (query, options) {
