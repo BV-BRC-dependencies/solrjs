@@ -475,7 +475,7 @@ var handlers = [
           break
       }
     })
-    return `&fq={!join fromIndex=genome from=genome_id to=${joinToColumnName}}` + (parts.length === 1 ? parts[0] : `(${parts.join(' AND ')})`)
+    return `*&fq={!join fromIndex=genome from=genome_id to=${joinToColumnName}}` + (parts.length === 1 ? parts[0] : `(${parts.join(' AND ')})`)
   }],
 
   // ['cursor', function (query, options) {
