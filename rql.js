@@ -72,7 +72,66 @@ RQLQuery.prototype.toSolr = function (opts) {
     })
   }
 
+  if (normalized.genome && normalized.genome.length > 0) {
+    var joinToColumnName = 'genome_id'
+    var parts = []
+    normalized.genome.forEach((a) => {
+      switch (a.name) {
+        // process special ops
+        case 'to':
+          joinToColumnName = a.args[0]
+          break
+        default:
+          parts.push(queryToSolr(a, {}))
+          break
+      }
+    })
+
+    var joinQuery = `&fq={!join fromIndex=genome from=genome_id to=${joinToColumnName}}` + (parts.length === 1 ? parts[0] : `(${parts.join(' AND ')})`)
+    sq += joinQuery
+  }
+
   return '&q=' + sq
+}
+
+/* recursively iterate over query terms calling 'fn' for each term */
+RQLQuery.prototype.walk = function (fn, options) {
+  options = options || {}
+  function walk (name, terms) {
+    terms = terms || []
+
+    switch (name) {
+      case 'genome':
+        debug('special fn, genome. stop recursive travel.')
+        fn.call(this, name, terms)
+        break
+      default:
+        var i = 0
+        var l = terms.length
+        var term, args, func, newTerm
+        for (; i < l; i++) {
+          term = terms[i]
+          if (term == null) {
+            term = {}
+          }
+          func = term.name
+          args = term.args
+          if (!func || !args) {
+            continue
+          }
+          if (args[0] instanceof RQLQuery) {
+            walk.call(this, func, args)
+          } else {
+            newTerm = fn.call(this, func, args)
+            if (newTerm && newTerm.name && newTerm.ags) {
+              terms[i] = newTerm
+            }
+          }
+        }
+        break
+    }
+  }
+  walk.call(this, this.name, this.args)
 }
 
 RQLQuery.prototype.normalize = function (options) {
@@ -462,20 +521,6 @@ var handlers = [
   //   => fq={!join fromIndex=genomes from=genome_id to=genome_id}(taxon_lineage_ids:1234 AND genome_status:Complete)
   ['genome', function (query, options) {
     if (!options.genome) { options.genome = [] }
-    var joinToColumnName = 'genome_id'
-    var parts = []
-    query.args.forEach((a) => {
-      switch (a.name) {
-        // process special ops
-        case 'to':
-          joinToColumnName = a.args[0]
-          break
-        default:
-          parts.push(queryToSolr(a, options))
-          break
-      }
-    })
-    return `{!join fromIndex=genome from=genome_id to=${joinToColumnName}}` + (parts.length === 1 ? parts[0] : `(${parts.join(' AND ')})`)
   }],
 
   // ['cursor', function (query, options) {
