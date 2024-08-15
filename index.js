@@ -3,12 +3,31 @@ const EventEmitter = require('events').EventEmitter
 const declare = require('dojo-declare/declare')
 const Readable = require('event-stream').readable
 const Http = require('http')
+const Https = require('https')
 const URL = require('url').URL
 const limitRe = /(&rows=)(\d*)/
 
-function subQuery (options, body) {
+function getMethodAndAuthFromURL(url, agent) {
+    const parsedUrl = new URL(url)
+
+    const obj = parsedUrl.protocol === "http:" ? Http : Https;
+    const auth = parsedUrl.password ? `${parsedUrl.username}:${parsedUrl.password}` : '';
+    //    debug(`have obj with proto ${obj.globalAgent.protocol}`);
+    const ret = {
+	auth: auth,
+	protocol: parsedUrl.protocol
+    }
+    if (agent) {
+	ret.agent = agent;
+    }
+
+    // debug(`returning ${JSON.stringify([obj, ret],undefined,2)}`)
+    return [obj, ret];
+}
+
+function subQuery (reqObj, options, body) {
   return new Promise((resolve, reject) => {
-    const req = Http.request(options, (res) => {
+    const req = reqObj.request(options, (res) => {
       let rawData = ''
       res.on('data', (chunk) => {
         rawData += chunk.toString()
@@ -25,7 +44,7 @@ function subQuery (options, body) {
       })
     })
     req.on('error', (err) => {
-      reject(new Error(`Unable to request the database. ${err.code}`))
+      reject(new Error(`Unable to request the database. ${err}`))
     })
     req.write(body)
     req.end()
@@ -62,10 +81,14 @@ module.exports = declare([EventEmitter], {
 
     debug(`Stream call: ${qbody}`)
 
-    const parsedUrl = new URL(this.url)
-    subQuery({
-      method: 'POST',
-      agent: this.agent,
+      const parsedUrl = new URL(this.url)
+      const [reqObj, reqOpts] = getMethodAndAuthFromURL(this.url, this.agent)
+      
+      subQuery(
+	  reqObj,
+	  {
+	      ...reqpts,
+	      method: 'POST',
       headers: {
         accept: 'application/json',
         'Content-Type': 'application/x-www-form-urlencoded'
@@ -167,12 +190,15 @@ module.exports = declare([EventEmitter], {
     return new Promise((resolve, reject) => {
       const parsedUrl = new URL(this.url)
       const qbody = `${query}&wt=json`
-      debug(`Query call: ${qbody}`)
+      debug(`Query call: ${qbody} `)
       // debug(`${parsedUrl.host}/${parsedUrl.path}/select?${qbody}`)
 
-      const req = Http.request({
+	const [reqObj, reqOpts] = getMethodAndAuthFromURL(this.url, this.agent)
+
+	// console.log(`${reqObj.globalAgent.protocol} and ${JSON.stringify(reqOpts)}`);
+	const req = reqObj.request({
+	    ...reqOpts,
         method: 'POST',
-        agent: this.agent,
         headers: {
           accept: 'application/json',
           'Content-Type': 'application/x-www-form-urlencoded'
@@ -204,7 +230,7 @@ module.exports = declare([EventEmitter], {
         })
       })
       req.on('error', (err) => {
-        reject(new Error(`Unable to request the database. ${err.code}`))
+        reject(new Error(`Unable to request the database. ${err}`))
       })
       req.write(qbody)
       req.end()
@@ -226,12 +252,16 @@ module.exports = declare([EventEmitter], {
       } else {
         id = encodeURIComponent(id)
       }
+
+      const [reqObj, reqOpts] = getMethodAndAuthFromURL(this.url, this.agent)
+
       debug(`GET call: ${this.url}/get?${prop}=${id}`)
-      const req = Http.get(`${this.url}/get?${prop}=${id}`, {
-        headers: {
+      const req = reqObj.get(`${this.url}/get?${prop}=${id}`, {
+          headers: {
           accept: 'application/json'
         },
-        agent: this.agent
+	  ...reqOpts,
+
       }, (res) => {
         let rawResponseData = ''
         res.on('data', (chunk) => {
@@ -250,7 +280,7 @@ module.exports = declare([EventEmitter], {
         })
       })
       req.on('error', (err) => {
-        reject(new Error(`Unable to request the database. ${err.code}`))
+        reject(new Error(`Unable to request the database. ${err}`))
       })
     })
   },
@@ -281,7 +311,7 @@ module.exports = declare([EventEmitter], {
         })
       })
       req.on('error', (err) => {
-        reject(new Error(`Unable to request the database. ${err.code}`))
+        reject(new Error(`Unable to request the database. ${err}`))
       })
     })
   }
