@@ -87,7 +87,7 @@ RQLQuery.prototype.toSolr = function (opts) {
       }
     })
 
-    var joinQuery = `&fq={!join fromIndex=genome from=genome_id to=${joinToColumnName}}` + (parts.length === 1 ? parts[0] : `(${parts.join(' AND ')})`)
+    var joinQuery = `&fq={!join method=crossCollection fromIndex=genome from=genome_id to=${joinToColumnName}}` + (parts.length === 1 ? parts[0] : `(${parts.join(' AND ')})`)
     sq += joinQuery
   }
 
