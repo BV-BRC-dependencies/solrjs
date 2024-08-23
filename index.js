@@ -87,7 +87,7 @@ module.exports = declare([EventEmitter], {
       subQuery(
 	  reqObj,
 	  {
-	      ...reqpts,
+	      ...reqOpts,
 	      method: 'POST',
       headers: {
         accept: 'application/json',
