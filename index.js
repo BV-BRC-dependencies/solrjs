@@ -62,7 +62,7 @@ module.exports = declare([EventEmitter], {
   setAgent: function (agent) {
     this.agent = agent
   },
-  streamChunkSize: 200,
+  streamChunkSize: 2000,
   maxStreamSize: 250000,
   _streamQuery: function (query, stream, callback, currentCount, totalReqLimit, cursorMark) {
     debug(`_streamQuery currentCount: ${currentCount} total: ${totalReqLimit}`)
@@ -87,7 +87,7 @@ module.exports = declare([EventEmitter], {
       subQuery(
 	  reqObj,
 	  {
-	      ...reqpts,
+	      ...reqOpts,
 	      method: 'POST',
       headers: {
         accept: 'application/json',
@@ -97,6 +97,7 @@ module.exports = declare([EventEmitter], {
       port: parsedUrl.port,
       path: `${parsedUrl.pathname}/select`
     }, qbody).then((data) => {
+	    //console.log("RAW " + JSON.stringify(data, 0, 2));
       if (cursorMark === '*') {
         const header = { response: {} }
         if (data.responseHeader) {
