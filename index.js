@@ -57,10 +57,14 @@ module.exports = declare([EventEmitter], {
     this.url = url
     this.options = options
     this.agent = undefined
+    this.headers = {}
   },
 
   setAgent: function (agent) {
     this.agent = agent
+  },
+  setHeaders: function(headers) {
+     Object.assign(this.headers, headers)
   },
   streamChunkSize: 2000,
   maxStreamSize: 250000,
@@ -91,7 +95,8 @@ module.exports = declare([EventEmitter], {
 	      method: 'POST',
       headers: {
         accept: 'application/json',
-        'Content-Type': 'application/x-www-form-urlencoded'
+        'Content-Type': 'application/x-www-form-urlencoded',
+	 ...this.headers
       },
       hostname: parsedUrl.hostname,
       port: parsedUrl.port,
@@ -202,7 +207,8 @@ module.exports = declare([EventEmitter], {
         method: 'POST',
         headers: {
           accept: 'application/json',
-          'Content-Type': 'application/x-www-form-urlencoded'
+          'Content-Type': 'application/x-www-form-urlencoded',
+	   ...this.headers
         },
         hostname: parsedUrl.hostname,
         port: parsedUrl.port,
