@@ -425,7 +425,7 @@ var handlers = [
   }],
 
   ['keyword', function (query, options) {
-    return query.args[0]
+    return 'text:' + query.args[0]
   }],
 
   // ['distinct', function (query, options) {
